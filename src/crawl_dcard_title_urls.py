@@ -33,7 +33,7 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
     driver = None
     try:
         driver = Driver(uc=True, headless=True)
-        driver.uc_open_with_reconnect(target_url, reconnect_time=3, uc_subprocess=False)
+        driver.uc_open_with_reconnect(target_url, reconnect_time=3)
         article_section = driver.find_element(
             "xpath", '//*[@id="__next"]/div[2]/div[2]/div/div/div/div[2]/div/div[1]/div'
         )
