@@ -18,6 +18,7 @@
 ## 🔧 技術細節
 
 ### 環境配置
+
 - **Python 版本**: 3.13.2
 - **套件管理**: 使用 `uv` 進行快速安裝
 - **運行環境**: Ubuntu Latest
@@ -54,18 +55,21 @@
 ## 🔍 監控與除錯
 
 ### GitHub Actions 頁面功能
+
 - **即時日誌**: 查看每個步驟的執行狀況
 - **統計摘要**: 每次執行後顯示爬取統計
 - **錯誤截圖**: 失敗時自動上傳錯誤截圖
 - **執行歷史**: 追蹤所有執行記錄
 
 ### 日誌資訊
+
 - 🚀 開始/完成標記
 - 📊 統計資料 (URL 數量、文章數量)
 - ✅/❌ 成功/失敗狀態
 - 📈 進度追蹤
 
 ### 錯誤處理
+
 - 失敗時自動保存錯誤截圖
 - 詳細的錯誤日誌
 - 7 天的錯誤資料保留期
@@ -73,6 +77,7 @@
 ## 🚀 手動執行
 
 在 GitHub 倉庫頁面：
+
 1. 點擊 "Actions" 標籤
 2. 選擇 "Crawl Dcard Data" workflow
 3. 點擊 "Run workflow" 按鈕
@@ -81,6 +86,7 @@
 ## ⚙️ 配置選項
 
 如需修改爬取行為，可以編輯：
+
 - `src/crawl_dcard_title_urls.py` - URL 爬取邏輯
 - `src/crawl_dcard_url_content.py` - 內容爬取邏輯
 - `.github/workflows/crawl-dcard.yml` - GitHub Action 配置
@@ -88,7 +94,8 @@
 ## 📝 提交訊息格式
 
 自動提交會包含以下資訊：
-```
+
+```md
 🤖 Auto-crawl: Updated Dcard data
 
 📊 Stats:
@@ -101,6 +108,7 @@
 ## 🔒 權限要求
 
 Action 需要以下權限：
+
 - **Contents**: 讀寫倉庫內容
 - **Actions**: 執行 workflow
 - **Metadata**: 讀取倉庫元資料

@@ -41,7 +41,7 @@ jobs:
     - name: 📥 Install dependencies
       run: |
         echo "::group::Installing dependencies with uv"
-        uv sync --frozen
+        uv sync
         echo "::endgroup::"
     
     - name: 📁 Create static directory
@@ -101,7 +101,7 @@ jobs:
         git config --local user.name "GitHub Action"
         
         # 檢查是否有變更
-        if git diff --exit-code; then
+        if git diff --exit-code static/; then
           echo "📝 No changes to commit"
         else
           echo "💾 Changes detected, committing..."
@@ -120,15 +120,8 @@ jobs:
           fi
           
           # 創建提交訊息
-          COMMIT_MSG="🤖 Auto-crawl: Updated Dcard data
-
-📊 Stats:
-- URLs: $URLS_COUNT
-- Articles: $CONTENT_COUNT
-- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-- Run: #${{ github.run_number }}"
-          
-          git commit -m "$COMMIT_MSG"
+          TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          git commit -m "🤖 Auto-crawl: Updated Dcard data - URLs: $URLS_COUNT, Articles: $CONTENT_COUNT - $TIMESTAMP - Run: #${{ github.run_number }}"
           git push
           
           echo "✅ Changes committed and pushed successfully"

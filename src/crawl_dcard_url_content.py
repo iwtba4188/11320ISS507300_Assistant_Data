@@ -60,10 +60,10 @@ def main():
     """
     # Path to the CSV file
     RES_SAVE_PATH = "./static/dcard_urls.csv"
-    
+
     # Ensure static directory exists
     os.makedirs(os.path.dirname(RES_SAVE_PATH), exist_ok=True)
-    
+
     # Load existing URLs
     df = load_crawled_urls(RES_SAVE_PATH)
 

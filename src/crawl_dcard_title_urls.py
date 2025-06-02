@@ -18,11 +18,11 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
     Crawls the urls in Dcard for posts related to pet adoption.
 
     Args:
-        target_url_num (int): The number of URLs to retrieve. Default is 3.
+        target_url_num (int): The number of URLs to retrieve. Default is 30.
 
     Returns:
-        list[tuple[str, str]] | None: A list of tuples containing the title and URL of each post.
-                                      Returns None if an error occurs.
+        list[tuple[str, str, bool]] | None: A list of tuples containing the title, URL, and crawled status of each post.
+                                            Returns None if an error occurs.
     """
     target_url = ADOPTION_TAG_URL
 
@@ -30,6 +30,7 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
     existing_df = load_crawled_urls(RES_SAVE_PATH)
     existing_urls = set(existing_df["url"].tolist()) if not existing_df.empty else set()
 
+    driver = None
     try:
         driver = Driver(uc=True, headless=True)
         driver.uc_open_with_reconnect(target_url, reconnect_time=3, uc_subprocess=False)
@@ -37,9 +38,10 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
             "xpath", '//*[@id="__next"]/div[2]/div[2]/div/div/div/div[2]/div/div[1]/div'
         )
     except Exception as e:
-        driver.save_screenshot(
-            f"dcard_urls_{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.png"
-        )
+        if driver:
+            driver.save_screenshot(
+                f"dcard_urls_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            )
         raise RuntimeError(f"Error initializing Chrome driver: {e}") from e
 
     get_url_num = 0
@@ -47,8 +49,8 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
     url_result = []
     current_session_urls = set()  # Track URLs found in current session
 
-    while get_url_num < target_url_num:
-        try:
+    try:
+        while get_url_num < target_url_num:
             # Scroll down to load more posts
             driver.execute_script(f"window.scrollTo(0, {scroll_height});")
             time.sleep(2)  # Wait for new posts to load
@@ -82,15 +84,24 @@ def cawling_dcard_urls(target_url_num: int = 30) -> list[tuple[str, str, bool]] 
 
             if get_url_num >= target_url_num:
                 break
-        except Exception as e:
-            raise RuntimeError(f"Error retrieving post elements: {e}") from e
-        finally:
-            driver.quit()
 
-        scroll_height += random.randint(300, 600)
+            scroll_height += random.randint(300, 600)
+
+    except Exception as e:
+        if driver:
+            driver.save_screenshot(
+                f"dcard_urls_error_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png"
+            )
+        raise RuntimeError(f"Error retrieving post elements: {e}") from e
+    finally:
+        # Close driver after all processing is complete
+        if driver:
+            try:
+                driver.quit()
+            except Exception:
+                pass  # Driver might already be closed
 
     print(f"Retrieved {len(url_result)} new URLs.")
-
     return url_result[:target_url_num]
 
 
@@ -100,7 +111,7 @@ def main():
     """
     # Ensure static directory exists
     os.makedirs(os.path.dirname(RES_SAVE_PATH), exist_ok=True)
-    
+
     target_urls = cawling_dcard_urls()
     if target_urls:
         print("Crawled URLs:")
