@@ -1,0 +1,173 @@
+name: Crawl Dcard Data
+
+on:
+  schedule:
+    # 每小時執行一次 (UTC 時間)
+    - cron: '0 * * * *'
+  workflow_dispatch: # 允許手動觸發
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - '.github/workflows/crawl-dcard.yml'
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  crawl-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - name: 🛠️ Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: 🐍 Set up Python 3.13.2
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13.2'
+    
+    - name: 📦 Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+    
+    - name: 📥 Install dependencies
+      run: |
+        echo "::group::Installing dependencies with uv"
+        uv sync --frozen
+        echo "::endgroup::"
+    
+    - name: 📁 Create static directory
+      run: |
+        mkdir -p static
+        echo "📁 Static directory created"
+    
+    - name: 🔍 Crawl Dcard URLs
+      run: |
+        echo "::group::Crawling Dcard URLs"
+        echo "🚀 Starting URL crawling process..."
+        uv run python src/crawl_dcard_title_urls.py
+        echo "✅ URL crawling completed"
+        echo "::endgroup::"
+    
+    - name: 📄 Check crawled URLs
+      run: |
+        if [ -f "static/dcard_urls.csv" ]; then
+          echo "📊 URLs file found. Number of URLs:"
+          wc -l < static/dcard_urls.csv
+          echo "📋 First few entries:"
+          head -5 static/dcard_urls.csv
+        else
+          echo "❌ No URLs file found"
+        fi
+    
+    - name: 📖 Crawl article content
+      run: |
+        echo "::group::Crawling article content"
+        echo "🚀 Starting content crawling process..."
+        uv run python src/crawl_dcard_url_content.py
+        echo "✅ Content crawling completed"
+        echo "::endgroup::"
+    
+    - name: 📊 Check crawled content
+      run: |
+        if [ -f "static/dcard_contents.json" ]; then
+          echo "📝 Content file found. File size:"
+          ls -lh static/dcard_contents.json
+          echo "📈 Number of articles:"
+          jq length static/dcard_contents.json
+        else
+          echo "❌ No content file found"
+        fi
+    
+    - name: 📸 Upload screenshots on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: error-screenshots-${{ github.run_number }}
+        path: "*.png"
+        retention-days: 7
+    
+    - name: 📤 Commit and push changes
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # 檢查是否有變更
+        if git diff --exit-code; then
+          echo "📝 No changes to commit"
+        else
+          echo "💾 Changes detected, committing..."
+          git add static/
+          
+          # 獲取統計資訊
+          URLS_COUNT=0
+          CONTENT_COUNT=0
+          
+          if [ -f "static/dcard_urls.csv" ]; then
+            URLS_COUNT=$(wc -l < static/dcard_urls.csv)
+          fi
+          
+          if [ -f "static/dcard_contents.json" ]; then
+            CONTENT_COUNT=$(jq length static/dcard_contents.json)
+          fi
+          
+          # 創建提交訊息
+          COMMIT_MSG="🤖 Auto-crawl: Updated Dcard data
+
+📊 Stats:
+- URLs: $URLS_COUNT
+- Articles: $CONTENT_COUNT
+- Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+- Run: #${{ github.run_number }}"
+          
+          git commit -m "$COMMIT_MSG"
+          git push
+          
+          echo "✅ Changes committed and pushed successfully"
+          echo "📈 URLs: $URLS_COUNT, Articles: $CONTENT_COUNT"
+        fi
+    
+    - name: 📋 Job summary
+      if: always()
+      run: |
+        echo "## 🚀 Dcard Crawling Job Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📊 Statistics" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "static/dcard_urls.csv" ]; then
+          URLS_COUNT=$(wc -l < static/dcard_urls.csv)
+          echo "- 📄 Total URLs: **$URLS_COUNT**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- 📄 Total URLs: **0** (file not found)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ -f "static/dcard_contents.json" ]; then
+          CONTENT_COUNT=$(jq length static/dcard_contents.json)
+          echo "- 📖 Total Articles: **$CONTENT_COUNT**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- 📖 Total Articles: **0** (file not found)" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ⏰ Execution Info" >> $GITHUB_STEP_SUMMARY
+        echo "- 🕐 Started: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+        echo "- 🔄 Run Number: **#${{ github.run_number }}**" >> $GITHUB_STEP_SUMMARY
+        echo "- 🌐 Workflow: **${{ github.workflow }}**" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "- ✅ Status: **Success**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ❌ Status: **Failed**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+env:
+  PYTHONPATH: ${{ github.workspace }}
+  PYTHONUNBUFFERED: 1
