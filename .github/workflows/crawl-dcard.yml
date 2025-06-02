@@ -44,15 +44,36 @@ jobs:
         uv sync
         echo "::endgroup::"
     
+    - name: 🖥️ Setup Xvfb for head mode support
+      run: |
+        echo "::group::Setting up Xvfb virtual display"
+        sudo apt-get update -qq
+        sudo apt-get install -y xvfb xfonts-100dpi xfonts-75dpi xfonts-scalable xfonts-cyrillic
+        echo "📺 Xvfb and fonts installed successfully"
+        echo "::endgroup::"
+    
+    - name: 🚀 Start virtual display
+      run: |
+        echo "🖥️ Starting Xvfb virtual display..."
+        export DISPLAY=':99.0'
+        Xvfb :99 -screen 0 1024x768x24 -ac +extension GLX +render -noreset > /dev/null 2>&1 &
+        sleep 5
+        echo "✅ Virtual display started on :99.0"
+        echo "🔍 Checking if display is available..."
+        xdpyinfo -display :99.0 | head -5 || echo "⚠️ Display info not available, but continuing..."
+    
     - name: 📁 Create static directory
       run: |
         mkdir -p static
         echo "📁 Static directory created"
     
     - name: 🔍 Crawl Dcard URLs
+      env:
+        DISPLAY: ':99.0'
       run: |
         echo "::group::Crawling Dcard URLs"
         echo "🚀 Starting URL crawling process..."
+        echo "🖥️ Using display: $DISPLAY"
         uv run python src/crawl_dcard_title_urls.py
         echo "✅ URL crawling completed"
         echo "::endgroup::"
@@ -69,9 +90,12 @@ jobs:
         fi
     
     - name: 📖 Crawl article content
+      env:
+        DISPLAY: ':99.0'
       run: |
         echo "::group::Crawling article content"
         echo "🚀 Starting content crawling process..."
+        echo "🖥️ Using display: $DISPLAY"
         uv run python src/crawl_dcard_url_content.py
         echo "✅ Content crawling completed"
         echo "::endgroup::"
@@ -164,3 +188,4 @@ jobs:
 env:
   PYTHONPATH: ${{ github.workspace }}
   PYTHONUNBUFFERED: 1
+  DISPLAY: ':99.0'

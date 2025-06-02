@@ -23,7 +23,7 @@ def crawling_dcard_article_content(target_url: str) -> dict | None:
     """
     driver = None
     try:
-        driver = Driver(uc=True, headless=True)
+        driver = Driver(uc=True, headless=False)
         driver.uc_open_with_reconnect(target_url, reconnect_time=3)
 
         result = defaultdict(str)
